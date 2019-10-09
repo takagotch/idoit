@@ -160,23 +160,72 @@ describe('chain', function () {
   });
   
   it('should pass result of group to next task', async function () {
+    q.resigterTask('t1', (a, b) => a * b);
+    q.registerTask('t2', groupResults => groupResults.reduce((acc, curr) => acc + curr, 0));
+    
+    let id = await.q.chain([
+      q.group([ q.t1(2, 3), q.t1(4, 1), q.t1(7, 2) ]),
+      q.t2()
+    ]).run();
+    
+    let task = await q.wait(id);
+    
+    assert.equal(task.result, 24);
+  });
   
+  it('should fail with empty children', function () {
+    return q.chain([]).run().then(
+      () => { throw new Error('should fail'); },
+      () => {}
+    );
   });
   
   it('should run user init', async function () {
-  
+    let calls = 0;
+    
+    q.registerTask('t1', () => {});
+    
+    q.resisterTask({
+      name: 't2',
+      baseClass: Queue.ChainTemplate,
+      init: () => { calls++; }
+    });
+    
+    let id = await q.t2([ q.t1() ]).run();
+    await q.wait(id);
+    
+    assert.equal(calls, 1);
   });
   
   it('should allow custom arguments for task with user init', async function () {
-  
+    let t1_calls = 0;
+    let init_calls = 0;
+    
+    q.registerTask('t1', () => { t1_calls++; });
+    
+    q.registerTask({
+      name: 't2',
+      baseClass: Queue.ChainTemplate,
+      init() {
+        assert.deepEqual(this.args, [ 'foo', 'bar' ]);
+        init_calls++;
+        return [ q.t1() ];
+      }
+    });
+    
+    let id = await q.t2('foo', 'bar').run();
+    await q.wait(id);
+    
+    assert.equal(t1_calls, 1);
+    assert.equal(init_calls, 1);
   });
   
   it('`.calcel()` should emit "task:end" event for all unfinished tasks in chain', async function () {
-    q.registerTask();
-    q.registerTask();
-    q.registerTask();
+    q.registerTask({ name: 't1', taskID: () => 't1', process: () => {} });
+    q.registerTask({ name: 't2', taskID: () => 't2', process: () => delay(1000000) });
+    q.registerTask({ name: 't3', taskID: () => 't3', process: () => {} });
     
-    let id = await q.chain().run();
+    let id = await q.chain([ q.t1(), q.t2(), q.t3() ]).run();
     
     await new Promise(resolve => q.once('task:end:t1', resolve));
     
