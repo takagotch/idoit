@@ -6,6 +6,13 @@ https://github.com/nodeca/idoit
 // test/chain.js
 'use strict';
 
+const assert = require('assert');
+
+const Queue = require('../index');
+const random = require('../lib/utils').random;
+
+const REDIS_URL = 'redis://localhost:6379/3';
+
 function delay(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
 
 async function clear_namespace(ns) {
@@ -16,7 +23,16 @@ async function clear_namespace(ns) {
   await r.quitAsync();
 }
 
-
+describe('chain', function () {
+  
+  let q, q_ns;
+  
+  beforeEach(async function () {
+    q_ns = `idoit_test_$test_${(random(6)}:`;
+  
+  
+  });
+});
 
 
 
